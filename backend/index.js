@@ -79,7 +79,7 @@ app.post('/api/auth/signup', validateInput, async (req, res) => {
     const { email, password } = req.body;
 
     // Check if user already exists
-    const [users] = await db.execute('SELECT id FROM users WHERE email = ?', [email]);
+    const [users] = await db.execute('SELECT user_id FROM users WHERE email = ?', [email]);
     if (users.length > 0) {
       return res.status(409).json({ error: 'User already exists with this email' });
     }
@@ -119,51 +119,45 @@ app.post('/api/auth/signup', validateInput, async (req, res) => {
 });
 
 // Sign in
-app.post('/api/auth/signin', validateInput, async (req, res) => {
+app.post('/api/auth/signin', async (req, res) => {
+  const { email, password } = req.body;
+
+  if (!email || !password) {
+    return res.status(400).json({ error: 'Email and password are required' });
+  }
+
   try {
-    const { email, password } = req.body;
+    const [rows] = await db.execute('SELECT * FROM users WHERE email = ?', [email]);
 
-    // Find user by email
-    const [users] = await db.execute('SELECT * FROM users WHERE email = ?', [email]);
-    const user = users[0];
-    
-    if (!user) {
-      return res.status(404).json({ error: 'User not found' });
+    if (rows.length === 0) {
+      return res.status(401).json({ error: 'User not found' });
     }
 
-    // Verify password
-    const validPassword = await bcrypt.compare(password, user.password);
-    if (!validPassword) {
-      return res.status(401).json({ error: 'Invalid password' });
-    }
+    const user = rows[0];
 
-    // Generate JWT token
-    const token = jwt.sign(
-      { 
-        id: user.id, 
-        email: user.email 
-      }, 
-      process.env.JWT_SECRET,
-      { expiresIn: '24h' }
-    );
+     // 🟢 CORRECT WAY TO COMPARE PASSWORDS
+        const isMatch = await bcrypt.compare(password, user.password);
 
-    // Update last login
-    await db.execute(
-      'UPDATE users SET last_login = NOW() WHERE id = ?', 
-      [user.id]
-    );
+        if (!isMatch) {
+            // This is the correct check for an incorrect password
+            return res.status(401).json({ error: 'Incorrect password' });
+        }
 
-    res.json({ 
-      message: 'Login successful', 
+    const token = jwt.sign({ userId: user.user_id }, process.env.JWT_SECRET, {
+      expiresIn: '1h',
+    });
+
+    return res.status(200).json({
       token,
       user: {
-        id: user.id,
-        email: user.email
-      }
+        user_id: user.user_id,
+        name: user.name,
+        email: user.email,
+      },
     });
-  } catch (error) {
-    console.error('Signin error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+  } catch (err) {
+    console.error('Login error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
   }
 });
 
@@ -314,7 +308,7 @@ Generate a form with these requirements: ${query}`;
   }
 });
 
-app.get('/user/:userId',async(req,res)=>{
+app.get('/api/user/:userId',async(req,res)=>{
   const {userId}=req.params;
 
   try{
@@ -340,6 +334,57 @@ app.get('/user/:userId',async(req,res)=>{
   }
 });
 
+// ... (your existing code) ...
+
+// Endpoint to save a form as a draft
+// Endpoint to save a form as a draft
+app.post('/api/forms/save', async (req, res) => {
+    try {
+        const { userId, title, fields } = req.body;
+
+        if (!userId || !title || !fields || !Array.isArray(fields)) {
+            return res.status(400).json({ error: 'User ID, title, and form fields are required' });
+        }
+
+        // 1. Insert into the forms table
+        const [formResult] = await db.execute(
+            'INSERT INTO forms (user_id, title, status) VALUES (?, ?, ?)',
+            [userId, title, 'draft']
+        );
+        const formId = formResult.insertId;
+
+        // 2. Prepare the fields data for insertion
+        const fieldValues = fields.map(field => {
+            return [
+                formId,
+                field.label,
+                field.name,
+                field.type,
+                // FIX: Convert the boolean 'required' value to 1 or 0 for MySQL
+                field.required ? 1 : 0, 
+                JSON.stringify(field.options || [])
+            ];
+        });
+
+        // 3. Insert all fields into the form_fields table
+        if (fieldValues.length > 0) {
+            await db.query(
+                'INSERT INTO form_fields (form_id, label, name, type, required, options) VALUES ?',
+                [fieldValues]
+            );
+        }
+
+        res.status(201).json({
+            message: 'Form saved successfully',
+            formId: formId,
+            status: 'draft'
+        });
+
+    } catch (error) {
+        console.error('Error saving form:', error);
+        res.status(500).json({ error: 'Failed to save form' });
+    }
+});
 
 
 // SERVER SETUP
