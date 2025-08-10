@@ -1,3 +1,5 @@
+
+
 # **FormCraft – AI-Powered Dynamic Form Generator**  
 
 FormCraft is a web-based tool that enables users to create and manage fully customizable forms dynamically, without writing code.  
@@ -22,7 +24,7 @@ Built with **React**, **Node.js**, and **MySQL**, it supports conditional logic,
 
 ---
 
-## 🛠 Workflow  
+## 🛠 **Workflow**  
 
 ```mermaid
 flowchart LR
@@ -34,10 +36,13 @@ flowchart LR
     F --> G[Form Retrieval by Users]
     G --> H[View Results in Dashboard]
 
+```
 
-## 📸 **Screenshots**
-(Add screenshots or GIFs of your app here)
+---
 
 ## 🤝 **Contributing**
 Contributions, issues, and feature requests are welcome!
 Feel free to fork the repo and submit a pull request.
+
+
+
