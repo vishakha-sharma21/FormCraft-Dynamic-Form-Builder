@@ -35,4 +35,9 @@ flowchart LR
     G --> H[View Results in Dashboard]
 
 
+## 📸 **Screenshots**
+(Add screenshots or GIFs of your app here)
 
+## 🤝 **Contributing**
+Contributions, issues, and feature requests are welcome!
+Feel free to fork the repo and submit a pull request.
