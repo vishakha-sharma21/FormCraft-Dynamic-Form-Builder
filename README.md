@@ -32,9 +32,7 @@ flowchart LR
     D --> E[Real-time Preview]
     E --> F[Save Form to MySQL Database]
     F --> G[Form Retrieval by Users]
-    G --> H[User Submits Response]
-    H --> I[Store Response in Database]
-    I --> J[View Results in Dashboard]
+    G --> H[View Results in Dashboard]
 
 
 
