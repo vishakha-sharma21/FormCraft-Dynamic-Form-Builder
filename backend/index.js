@@ -22,6 +22,7 @@ const app = express();
 const corsOptions = {
   origin: [
     'http://localhost:5173',
+    'https://form-craft-dynamic-form-builder.vercel.app',
     'https://formcraft-dynamic-form-builder.onrender.com',
     process.env.FRONTEND_URL
   ].filter(Boolean),
@@ -29,6 +30,9 @@ const corsOptions = {
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 };
+
+// Debug: Log CORS configuration
+console.log('🌐 CORS Configuration:', corsOptions);
 
 app.use(cors(corsOptions));
 app.use(express.json());

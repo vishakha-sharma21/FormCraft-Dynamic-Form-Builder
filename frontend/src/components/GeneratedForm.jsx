@@ -9,6 +9,7 @@ import { SortableContext, verticalListSortingStrategy, arrayMove } from '@dnd-ki
 import API_CONFIG from '../config/api'; // Assuming you use Redux for auth state
 import { useNavigate } from 'react-router-dom';
 
+
 const getValidationRules = (field) => {
     const rules = {};
     if (field.required) {
