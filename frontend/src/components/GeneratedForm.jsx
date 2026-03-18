@@ -8,9 +8,7 @@ import { DndContext, closestCenter } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
 import API_CONFIG from '../config/api'; // Assuming you use Redux for auth state
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios'; // Or use fetch
 
-// ... (keep your existing getValidationRules and FormField components as they are)
 const getValidationRules = (field) => {
     const rules = {};
     if (field.required) {

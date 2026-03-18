@@ -40,6 +40,8 @@ const LoginPage = () => {
 
     try {
       console.log('🔄 Starting login process...', { email });
+      console.log('🔗 Using API URL:', API_BASE_URL);
+      console.log('🌐 Full login URL:', `${API_BASE_URL}/api/auth/signin`);
       
       const res = await fetch(`${API_BASE_URL}/api/auth/signin`, {
         method: 'POST',
