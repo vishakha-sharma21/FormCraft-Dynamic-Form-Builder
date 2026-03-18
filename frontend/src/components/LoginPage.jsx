@@ -4,8 +4,9 @@ import { useDispatch } from 'react-redux';
 import { loginSuccess } from '../redux/authSlice';
 import { FiLock, FiMail } from 'react-icons/fi';
 import { FcGoogle } from 'react-icons/fc';
+import API_CONFIG from '../config/api';
 
-const API_BASE_URL = '';
+const API_BASE_URL = API_CONFIG.BASE_URL;
 
 // Message box component
 const MessageBox = ({ message, type }) => {

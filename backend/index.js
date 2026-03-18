@@ -18,7 +18,21 @@ console.log('Groq API Key:', process.env.GROQ_API_KEY ? '***' + process.env.GROQ
 console.log('Groq Model:', process.env.GROQ_MODEL || 'llama-3.3-70b-versatile (default)');
 
 const app = express();
-app.use(cors());
+const cors = require('cors');
+
+// CORS configuration for production
+const corsOptions = {
+  origin: [
+    'http://localhost:5173',
+    'https://formcraft-dynamic-form-builder.onrender.com',
+    process.env.FRONTEND_URL
+  ].filter(Boolean),
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+};
+
+app.use(cors(corsOptions));
 app.use(express.json());
 
 // Database connection

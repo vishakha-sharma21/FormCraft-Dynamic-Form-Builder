@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from 'react';
-import { useSelector } from 'react-redux';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useSelector, useDispatch } from 'react-redux';
 import axios from 'axios';
-import { FiFileText, FiGrid, FiRefreshCw, FiPlus } from 'react-icons/fi';
+import { FiPlus, FiRefreshCw, FiArrowLeft } from 'react-icons/fi';
+import API_CONFIG from '../config/api';
 import { toast } from 'react-hot-toast';
 
 const ViewAllFormsPage = () => {
@@ -18,7 +19,7 @@ const ViewAllFormsPage = () => {
     setLoading(true);
 
     try {
-      const response = await axios.get(`/api/user/${user.user_id}`, {
+      const response = await axios.get(`${API_CONFIG.BASE_URL}/api/user/${user.user_id}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -70,7 +71,7 @@ const ViewAllFormsPage = () => {
     }
 
     try {
-      await axios.delete(`/api/forms/${formId}`, {
+      await axios.delete(`${API_CONFIG.BASE_URL}/api/forms/${formId}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },

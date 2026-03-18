@@ -3,10 +3,10 @@ import { FiUser, FiMail, FiLock } from "react-icons/fi";
 import { FcGoogle } from "react-icons/fc";
 import { useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
-import { loginSuccess } from "../redux/authSlice"; // Update the path as per your file structure
+import { loginSuccess } from "../redux/authSlice"; 
+import API_CONFIG from '../config/api';
 
-// Configuration
-const API_BASE_URL = "";
+const API_BASE_URL = API_CONFIG.BASE_URL;
 
 // Message Box Component
 const MessageBox = ({ message, type }) => {

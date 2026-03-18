@@ -1,9 +1,9 @@
-import { useEffect, useState } from 'react';
-import { useSelector } from 'react-redux';
-import { useNavigate } from 'react-router-dom';
-import InputQuery from './InputQuery';
+import React, { useState, useEffect, useRef, useNavigate } from 'react';
+import { useSelector, useDispatch } from 'react-redux';
 import axios from 'axios';
-import { FiPlus, FiGrid, FiFileText, FiRefreshCw, FiAlertCircle } from 'react-icons/fi';
+import { FiPlus, FiRefreshCw, FiFileText, FiGrid } from 'react-icons/fi';
+import InputQuery from './InputQuery';
+import API_CONFIG from '../config/api';
 import { toast } from 'react-hot-toast';
 
 const Dashboard = () => {
@@ -20,7 +20,7 @@ const Dashboard = () => {
     setLoading(true); // Set loading to true when fetching starts
 
     try {
-      const response = await axios.get(`/api/user/${user.user_id}`, {
+      const response = await axios.get(`${API_CONFIG.BASE_URL}/api/user/${user.user_id}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -76,7 +76,7 @@ const Dashboard = () => {
         fields: fields,
       };
 
-      await axios.post('/api/forms/save', payload, {
+      await axios.post(`${API_CONFIG.BASE_URL}/api/forms/save`, payload, {
         headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -118,7 +118,7 @@ const Dashboard = () => {
     }
 
     try {
-      await axios.delete(`/api/forms/${formId}`, {
+      await axios.delete(`${API_CONFIG.BASE_URL}/api/forms/${formId}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
