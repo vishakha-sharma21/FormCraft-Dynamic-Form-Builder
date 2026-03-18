@@ -1,5 +1,5 @@
 // API Configuration for Production
-const API_BASE_URL = import.meta.env.VITE_API_URL || '';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://formcraft-dynamic-form-builder.onrender.com';
 
 // For development, use localhost
 // For production, this will be set to your Render URL

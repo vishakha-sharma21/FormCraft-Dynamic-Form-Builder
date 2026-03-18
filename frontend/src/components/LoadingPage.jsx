@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import API_CONFIG from '../config/api';
 import Loading from "./Loading";
 
 const LoadingPage = () => {
@@ -15,7 +16,7 @@ const LoadingPage = () => {
     const generateForm = async () => {
       try {
         setStatus("Generating your form...");
-        const response = await fetch("/generate-form", {
+        const response = await fetch(`${API_CONFIG.BASE_URL}/generate-form`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ query: formDescription }),

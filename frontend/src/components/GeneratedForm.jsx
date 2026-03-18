@@ -1,9 +1,12 @@
 // src/components/GeneratedForm.jsx
-import React, { useState, useCallback } from 'react';
-import { useForm, Controller } from 'react-hook-form';
-import { FiLoader, FiAlertCircle } from 'react-icons/fi';
-import { toast } from 'react-hot-toast';
-import { useSelector } from 'react-redux'; // Assuming you use Redux for auth state
+import React, { useState, useEffect } from 'react';
+import { useForm } from 'react-hook-form';
+import { useSelector, useDispatch } from 'react-redux';
+import axios from 'axios';
+import { FiPlus, FiTrash2, FiMove } from 'react-icons/fi';
+import { DndContext, closestCenter } from '@dnd-kit/core';
+import { SortableContext, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
+import API_CONFIG from '../config/api'; // Assuming you use Redux for auth state
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios'; // Or use fetch
 
@@ -394,7 +397,7 @@ const GeneratedForm = ({ schema, formTitle }) => {
                 // You might also want to save the current 'currentData' values separately
             };
 
-            const response = await axios.post('/api/forms/save', payload, {
+            const response = await axios.post(`${API_CONFIG.BASE_URL}/api/forms/save`, payload, {
                 headers: {
                     Authorization: `Bearer ${token}`,
                 },
