@@ -25,7 +25,8 @@ export const router = createBrowserRouter([
       {
         path:'example',
         element:<FormExamplesPage/>
-      },{
+      },
+      {
         path: 'generated-form',
         element: <GeneratedFormPage />,
       },
