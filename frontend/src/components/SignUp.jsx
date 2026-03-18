@@ -6,7 +6,7 @@ import { useDispatch } from "react-redux";
 import { loginSuccess } from "../redux/authSlice"; // Update the path as per your file structure
 
 // Configuration
-const API_BASE_URL = "http://localhost:3000";
+const API_BASE_URL = "";
 
 // Message Box Component
 const MessageBox = ({ message, type }) => {

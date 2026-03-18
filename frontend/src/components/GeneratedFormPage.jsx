@@ -31,13 +31,26 @@ const GeneratedFormPage = () => {
 
   // Initialize state with a more robust check, ensuring 'fields' is an array.
   const [formData, setFormData] = useState(() => {
-    const data = state?.formData || {};
-    if (Array.isArray(data)) {
-      // If we just got an array of fields, structure it correctly.
-      return { fields: data, title: 'My Form', description: 'Please fill out this form' };
+    // Handle form data from dashboard click
+    const formFromDashboard = state?.form;
+    const dataFromGeneration = state?.formData || {};
+    const title = state?.formTitle || formFromDashboard?.title || 'My Form';
+    
+    if (formFromDashboard) {
+      // Form is coming from dashboard click
+      return {
+        fields: formFromDashboard.fields || [],
+        title: formFromDashboard.title || title,
+        description: `Form with ${formFromDashboard.fields?.length || 0} fields`
+      };
     }
-    // Ensure fields property is always an array
-    return { ...data, fields: data.fields || [] };
+    
+    if (Array.isArray(dataFromGeneration)) {
+      // If we just got an array of fields, structure it correctly.
+      return { fields: dataFromGeneration, title: title, description: 'Please fill out this form' };
+    }
+    // Ensure fields property is always an array and use the title from state
+    return { ...dataFromGeneration, fields: dataFromGeneration.fields || [], title: state?.formTitle || dataFromGeneration.title || 'My Form' };
   });
 
   const [isEditing, setIsEditing] = useState(false);
@@ -88,7 +101,7 @@ const GeneratedFormPage = () => {
     toast.success("Saved Successfully !");
   };
 
-  if (!state || !state.formData) {
+  if (!state || (!state.formData && !state.form)) {
     return (
       <section className="bg-gray-50/50 min-h-screen py-12 px-4">
         <div className="max-w-4xl mx-auto bg-white p-6 rounded-lg shadow">
@@ -181,7 +194,7 @@ const GeneratedFormPage = () => {
               </SortableContext>
             </DndContext>
           ) : (
-            <GeneratedForm schema={formData} />
+            <GeneratedForm schema={formData} formTitle={formData.title} />
           )}
 
           {/* Add Field button outside the DndContext */}

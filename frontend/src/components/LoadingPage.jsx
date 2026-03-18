@@ -15,7 +15,7 @@ const LoadingPage = () => {
     const generateForm = async () => {
       try {
         setStatus("Generating your form...");
-        const response = await fetch("http://localhost:3000/generate-form", {
+        const response = await fetch("/generate-form", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ query: formDescription }),
@@ -38,13 +38,17 @@ const LoadingPage = () => {
           );
         }
 
+        // Extract title from response or use fallback
+        const formTitle = result.title || 'Generated Form';
+        console.log("Form Title:", formTitle);
+
         setStatus("Form ready! Redirecting...");
         const formId = Math.random().toString(36).substring(2, 9);
 
         navigate('/generated-form', {
           state: {
             formData: result.fields,
-
+            formTitle: formTitle,
             meta: {
               requestId: result.requestId,
 

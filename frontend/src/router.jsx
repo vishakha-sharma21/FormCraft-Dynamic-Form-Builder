@@ -10,6 +10,7 @@ import Features from './components/Features';
 import LoginPage from './components/LoginPage';
 import SignUp from './components/SignUp';
 import Dashboard from './components/Dashboard';
+import ViewAllFormsPage from './components/ViewAllFormsPage';
 import ProtectedRoute from './components/ProtectedRoute';
 
 export const router = createBrowserRouter([
@@ -49,6 +50,14 @@ export const router = createBrowserRouter([
         element: (
           <ProtectedRoute>
             <Dashboard />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'view-all-forms',
+        element: (
+          <ProtectedRoute>
+            <ViewAllFormsPage />
           </ProtectedRoute>
         ),
       },

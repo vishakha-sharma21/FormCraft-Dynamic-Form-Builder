@@ -5,7 +5,7 @@ import { loginSuccess } from '../redux/authSlice';
 import { FiLock, FiMail } from 'react-icons/fi';
 import { FcGoogle } from 'react-icons/fc';
 
-const API_BASE_URL = 'http://localhost:3000';
+const API_BASE_URL = '';
 
 // Message box component
 const MessageBox = ({ message, type }) => {

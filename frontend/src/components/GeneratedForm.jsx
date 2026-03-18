@@ -285,14 +285,18 @@ const FormField = ({ field, control, errors, loading }) => {
     );
 };
 
-
-const GeneratedForm = ({ schema }) => {
+const GeneratedForm = ({ schema, formTitle }) => {
     const [pincodeLoading, setPincodeLoading] = useState(false);
     const [isDraftSaving, setIsDraftSaving] = useState(false);
     
     // Auth state from Redux
     const { user, token } = useSelector((state) => state.auth);
     const navigate = useNavigate();
+
+    const formMethods = useForm({
+        mode: 'onChange',
+        defaultValues: {},
+    });
 
     const {
         control,
@@ -301,14 +305,11 @@ const GeneratedForm = ({ schema }) => {
         formState: { errors, isSubmitting, isValid },
         setValue,
         trigger,
-        getValues, // Use getValues to retrieve all form data
-    } = useForm({
-        mode: 'onChange',
-        defaultValues: {},
-    });
+        getValues,
+    } = formMethods;
 
     const fields = schema?.fields || [];
-    const formTitle = schema?.formSectionTitle || 'Untitled Form';
+    const displayTitle = formTitle || schema?.formSectionTitle || 'Untitled Form';
 
     const handlePincodeChange = useCallback(async (pincode) => {
         if (pincode && pincode.length === 6) {
@@ -393,7 +394,7 @@ const GeneratedForm = ({ schema }) => {
                 // You might also want to save the current 'currentData' values separately
             };
 
-            const response = await axios.post('http://localhost:3000/api/forms/save', payload, {
+            const response = await axios.post('/api/forms/save', payload, {
                 headers: {
                     Authorization: `Bearer ${token}`,
                 },
@@ -414,25 +415,27 @@ const GeneratedForm = ({ schema }) => {
     };
 
     if (!fields.length) {
-        return <p className="text-red-600 text-center py-10">Invalid form schema or no fields provided.</p>;
+        return (
+            <p className="text-red-600 text-center py-10">
+                Invalid form schema or no fields provided.
+            </p>
+        );
     }
 
     return (
-        <div className="bg-white border border-gray-200 rounded-lg p-8 shadow-sm max-w-4xl mx-auto">
-            <h2 className="text-xl font-semibold text-gray-800">
-                {formTitle}
-            </h2>
-            <p className="text-gray-500 mb-6">
-                {schema?.formSectionDescription || "We'll use this information to get in touch with you"}
-            </p>
-            
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* Render First Name and Last Name side-by-side */}
-                    {fields.filter(f => f.name.toLowerCase().includes('firstname') || f.name.toLowerCase().includes('first_name') || f.name.toLowerCase().includes('first name')).map(field => (
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Render First Name and Last Name side-by-side */}
+                {fields
+                    .filter((f) =>
+                        f.name.toLowerCase().includes('firstname') ||
+                        f.name.toLowerCase().includes('first_name') ||
+                        f.name.toLowerCase().includes('first name')
+                    )
+                    .map((field) => (
                         <FormField
                             key={field.name}
-                            field={{...field, className: 'md:col-span-1'}}
+                            field={{ ...field, className: 'md:col-span-1' }}
                             control={control}
                             errors={errors}
                         />
@@ -517,8 +520,7 @@ const GeneratedForm = ({ schema }) => {
                         </ul>
                     </div>
                 )}
-            </form>
-        </div>
+        </form>
     );
 };
 

@@ -3,7 +3,7 @@ const cors = require('cors');
 const axios = require('axios');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const mysql = require('mysql2/promise');
+const { MongoClient, ObjectId } = require('mongodb');
 const { v4: uuidv4 } = require('uuid');
 
 // Load environment variables first
@@ -11,44 +11,38 @@ require('dotenv').config();
 
 // Debug: Check if env variables are loaded
 console.log('Environment check:');
-console.log('DB_HOST:', process.env.DB_HOST || 'NOT SET');
-console.log('DB_USER:', process.env.DB_USER || 'NOT SET');
-console.log('DB_NAME:', process.env.DB_NAME || 'NOT SET');
+console.log('MONGODB_URI:', process.env.MONGODB_URI ? 'SET' : 'NOT SET');
+console.log('MONGODB_DB_NAME:', process.env.MONGODB_DB_NAME || 'NOT SET');
 console.log('JWT_SECRET:', process.env.JWT_SECRET ? 'SET' : 'NOT SET');
 console.log('Groq API Key:', process.env.GROQ_API_KEY ? '***' + process.env.GROQ_API_KEY.slice(-4) : 'NOT SET');
-console.log('Groq Model:', process.env.GROQ_MODEL || 'llama3-70b-8192 (default)');
+console.log('Groq Model:', process.env.GROQ_MODEL || 'llama-3.3-70b-versatile (default)');
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
 // Database connection
-const db = mysql.createPool({
-  host: process.env.DB_HOST || '127.0.0.1',
-  user: process.env.DB_USER || 'root',
-  password: process.env.DB_PASSWORD || '1234',
-  database: process.env.DB_NAME || 'dynamicforms',
-  waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0
-});
+let db;
+let client;
 
-console.log('Database config:');
-console.log('Host:', process.env.DB_HOST || '127.0.0.1');
-console.log('User:', process.env.DB_USER || 'root');
-console.log('Database:', process.env.DB_NAME || 'dynamicforms');
-
-// Test database connection
-async function testConnection() {
+async function connectToDatabase() {
   try {
-    const connection = await db.getConnection();
-    console.log('✅ Database connected successfully');
-    connection.release();
+    const uri = process.env.MONGODB_URI || 'mongodb://localhost:27017';
+    const dbName = process.env.MONGODB_DB_NAME || 'dynamicforms';
+    
+    client = new MongoClient(uri);
+    await client.connect();
+    db = client.db(dbName);
+    
+    console.log('✅ Connected to MongoDB Atlas successfully');
+    console.log('Database:', dbName);
   } catch (error) {
-    console.error('❌ Database connection failed:', error.message);
+    console.error('❌ MongoDB connection failed:', error.message);
+    process.exit(1);
   }
 }
-testConnection();
+
+connectToDatabase();
 
 // Input validation middleware
 const validateInput = (req, res, next) => {
@@ -79,8 +73,8 @@ app.post('/api/auth/signup', validateInput, async (req, res) => {
     const { email, password } = req.body;
 
     // Check if user already exists
-    const [users] = await db.execute('SELECT user_id FROM users WHERE email = ?', [email]);
-    if (users.length > 0) {
+    const existingUser = await db.collection('users').findOne({ email });
+    if (existingUser) {
       return res.status(409).json({ error: 'User already exists with this email' });
     }
 
@@ -89,15 +83,16 @@ app.post('/api/auth/signup', validateInput, async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, saltRounds);
     
     // Insert new user
-    const [result] = await db.execute(
-      'INSERT INTO users (email, password, created_at) VALUES (?, ?, NOW())', 
-      [email, hashedPassword]
-    );
+    const result = await db.collection('users').insertOne({
+      email,
+      password: hashedPassword,
+      created_at: new Date()
+    });
 
     // Generate JWT token for immediate login
     const token = jwt.sign(
       { 
-        userId: result.insertId,
+        userId: result.insertedId,
         email: email 
       },
       process.env.JWT_SECRET,
@@ -108,7 +103,7 @@ app.post('/api/auth/signup', validateInput, async (req, res) => {
       message: 'User created successfully',
       token,
       user: {
-        id: result.insertId,
+        id: result.insertedId,
         email: email
       }
     });
@@ -127,30 +122,28 @@ app.post('/api/auth/signin', async (req, res) => {
   }
 
   try {
-    const [rows] = await db.execute('SELECT * FROM users WHERE email = ?', [email]);
+    const user = await db.collection('users').findOne({ email });
 
-    if (rows.length === 0) {
+    if (!user) {
       return res.status(401).json({ error: 'User not found' });
     }
 
-    const user = rows[0];
+    // 🟢 CORRECT WAY TO COMPARE PASSWORDS
+    const isMatch = await bcrypt.compare(password, user.password);
 
-     // 🟢 CORRECT WAY TO COMPARE PASSWORDS
-        const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      // This is the correct check for an incorrect password
+      return res.status(401).json({ error: 'Incorrect password' });
+    }
 
-        if (!isMatch) {
-            // This is the correct check for an incorrect password
-            return res.status(401).json({ error: 'Incorrect password' });
-        }
-
-    const token = jwt.sign({ userId: user.user_id }, process.env.JWT_SECRET, {
+    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, {
       expiresIn: '1h',
     });
 
     return res.status(200).json({
       token,
       user: {
-        user_id: user.user_id,
+        user_id: user._id,
         name: user.name,
         email: user.email,
       },
@@ -175,13 +168,20 @@ app.post('/generate-form', async (req, res) => {
     });
   }
 
-  const prompt = `You are a JSON generator for dynamic forms. Respond ONLY with a raw JSON array. Each form field must follow this format:
+  const prompt = `You are a JSON generator for dynamic forms. Respond ONLY with a valid JSON object containing both a "title" and "fields" array.
+
+Your response must follow this exact format:
 {
-  "label": "Field Label",
-  "name": "fieldName",
-  "type": "text" | "email" | "number" | "checkbox" | "radio" | "select",
-  "required": true | false,
-  "options": ["Option1", "Option2"] // only for radio/select types
+  "title": "A descriptive title for the form based on the requirements",
+  "fields": [
+    {
+      "label": "Field Label",
+      "name": "fieldName",
+      "type": "text" | "email" | "number" | "checkbox" | "radio" | "select",
+      "required": true | false,
+      "options": ["Option1", "Option2"] // only for radio/select types
+    }
+  ]
 }
 
 Generate a form with these requirements: ${query}`;
@@ -194,33 +194,66 @@ Generate a form with these requirements: ${query}`;
     console.log(`[${requestId}] Calling Groq API...`);
     const startTime = Date.now();
     
-    const groqResponse = await axios.post(
-      'https://api.groq.com/openai/v1/chat/completions',
-      {
-        model: process.env.GROQ_MODEL || 'llama3-70b-8192',
-        messages: [
+    // Fallback models in order of preference (confirmed working models from Groq API)
+    const fallbackModels = [
+      process.env.GROQ_MODEL || 'llama-3.3-70b-versatile',
+      'llama-3.1-8b-instant',
+      'qwen/qwen3-32b',
+      'moonshotai/kimi-k2-instruct'
+    ];
+    
+    let groqResponse = null;
+    let lastError = null;
+    
+    // Try each model until one works
+    for (const model of fallbackModels) {
+      try {
+        console.log(`[${requestId}] Trying model: ${model}`);
+        
+        groqResponse = await axios.post(
+          'https://api.groq.com/openai/v1/chat/completions',
           {
-            role: 'system',
-            content: 'You are a JSON generator for dynamic forms. Respond with a valid JSON object containing a "fields" array.',
+            model: model,
+            messages: [
+              {
+                role: 'system',
+                content: 'You are a JSON generator for dynamic forms. Respond with a valid JSON object containing a "fields" array.',
+              },
+              {
+                role: 'user',
+                content: prompt,
+              },
+            ],
+            temperature: 0.3,
+            max_tokens: 2000,
+            response_format: { type: "json_object" }
           },
           {
-            role: 'user',
-            content: prompt,
-          },
-        ],
-        temperature: 0.3,
-        max_tokens: 2000,
-        response_format: { type: "json_object" }
-      },
-      {
-        headers: {
-          'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        timeout: 15000 // 15 seconds timeout
+            headers: {
+              'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
+              'Content-Type': 'application/json',
+              'Accept': 'application/json'
+            },
+            timeout: 15000 // 15 seconds timeout
+          }
+        );
+        
+        // If we get here, the model worked
+        console.log(`[${requestId}] Success with model: ${model}`);
+        break;
+        
+      } catch (error) {
+        lastError = error;
+        console.log(`[${requestId}] Model ${model} failed:`, error.response?.data?.error?.message || error.message);
+        
+        // Continue to next model
+        continue;
       }
-    );
+    }
+    
+    if (!groqResponse) {
+      throw lastError || new Error('All models failed');
+    }
 
     const duration = Date.now() - startTime;
     console.log(`[${requestId}] Groq API response received (${duration}ms)`);
@@ -241,12 +274,16 @@ Generate a form with these requirements: ${query}`;
       throw new Error('Received invalid JSON from Groq API');
     }
 
-    // Robust field extraction
+    // Robust field and title extraction
     let formFields;
+    let formTitle;
+    
     if (Array.isArray(parsedResponse)) {
       formFields = parsedResponse;
+      formTitle = 'Generated Form'; // Fallback title for array responses
     } else {
-      // Check common response structures
+      // Extract title and fields from object response
+      formTitle = parsedResponse.title || 'Generated Form';
       formFields = parsedResponse.fields || 
                   parsedResponse.form ||
                   parsedResponse.data ||
@@ -275,9 +312,10 @@ Generate a form with these requirements: ${query}`;
       };
     });
 
-    console.log(`[${requestId}] Successfully generated ${validatedFields.length} form fields`);
+    console.log(`[${requestId}] Successfully generated ${validatedFields.length} form fields with title: "${formTitle}"`);
     res.status(200).json({
       success: true,
+      title: formTitle,
       fields: validatedFields,
       requestId,
       responseTime: `${duration}ms`
@@ -285,6 +323,15 @@ Generate a form with these requirements: ${query}`;
 
   } catch (error) {
     console.error(`[${requestId}] Error:`, error.message);
+    
+    // Log detailed error information for debugging
+    if (error.response) {
+      console.error(`[${requestId}] Groq API Error Details:`, {
+        status: error.response.status,
+        statusText: error.response.statusText,
+        data: error.response.data
+      });
+    }
     
     // Determine appropriate status code
     let statusCode = 500;
@@ -313,20 +360,20 @@ app.get('/api/user/:userId',async(req,res)=>{
 
   try{
     //get all forms for user
-    const [forms]=await db.execute(
-      'SELECT * FROM forms WHERE user_id=?',[userId]
-    );
+    const forms = await db.collection('forms').find({ user_id: new ObjectId(userId) }).toArray();
 
-    //for each form get fields
-    for(const form of forms){
-      const [fields]=await db.execute(
-        'SELECT * FROM form_fields WHERE form_id=?',
-        [form.form_id]
-      );
-      form.fields=fields;
-    }
+    //transform forms for frontend compatibility
+    const transformedForms = forms.map(form => ({
+      form_id: form._id.toString(), // Convert ObjectId to string for frontend
+      title: form.title,
+      status: form.status || 'draft',
+      created_at: form.created_at,
+      fields: form.fields || [],
+      responses: 0, // Default response count
+      description: `Form with ${form.fields?.length || 0} fields` // Generate description
+    }));
 
-    res.json({forms});
+    res.json({ forms: transformedForms });
   }
   catch(err){
     console.error('Error fetching user forms:',err);
@@ -337,7 +384,6 @@ app.get('/api/user/:userId',async(req,res)=>{
 // ... (your existing code) ...
 
 // Endpoint to save a form as a draft
-// Endpoint to save a form as a draft
 app.post('/api/forms/save', async (req, res) => {
     try {
         const { userId, title, fields } = req.body;
@@ -346,33 +392,23 @@ app.post('/api/forms/save', async (req, res) => {
             return res.status(400).json({ error: 'User ID, title, and form fields are required' });
         }
 
-        // 1. Insert into the forms table
-        const [formResult] = await db.execute(
-            'INSERT INTO forms (user_id, title, status) VALUES (?, ?, ?)',
-            [userId, title, 'draft']
-        );
-        const formId = formResult.insertId;
-
-        // 2. Prepare the fields data for insertion
-        const fieldValues = fields.map(field => {
-            return [
-                formId,
-                field.label,
-                field.name,
-                field.type,
-                // FIX: Convert the boolean 'required' value to 1 or 0 for MySQL
-                field.required ? 1 : 0, 
-                JSON.stringify(field.options || [])
-            ];
+        // 1. Insert into the forms collection
+        const formResult = await db.collection('forms').insertOne({
+            user_id: new ObjectId(userId),
+            title,
+            status: 'draft',
+            created_at: new Date(),
+            fields: fields.map(field => ({
+                label: field.label,
+                name: field.name,
+                type: field.type,
+                required: Boolean(field.required),
+                options: field.options || [],
+                placeholder: field.placeholder || '',
+                defaultValue: field.defaultValue || null
+            }))
         });
-
-        // 3. Insert all fields into the form_fields table
-        if (fieldValues.length > 0) {
-            await db.query(
-                'INSERT INTO form_fields (form_id, label, name, type, required, options) VALUES ?',
-                [fieldValues]
-            );
-        }
+        const formId = formResult.insertedId;
 
         res.status(201).json({
             message: 'Form saved successfully',
@@ -386,10 +422,52 @@ app.post('/api/forms/save', async (req, res) => {
     }
 });
 
+// DELETE FORM ENDPOINT
+app.delete('/api/forms/:formId', async (req, res) => {
+    try {
+        const { formId } = req.params;
+        const token = req.headers.authorization?.split(' ')[1];
+
+        if (!token) {
+            return res.status(401).json({ error: 'No token provided' });
+        }
+
+        // Verify token and get user
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const user = await db.collection('users').findOne({ _id: new ObjectId(decoded.userId) });
+
+        if (!user) {
+            return res.status(401).json({ error: 'User not found' });
+        }
+
+        // Check if form exists and belongs to user
+        const form = await db.collection('forms').findOne({ 
+            _id: new ObjectId(formId),
+            user_id: new ObjectId(decoded.userId)
+        });
+
+        if (!form) {
+            return res.status(404).json({ error: 'Form not found' });
+        }
+
+        // Delete the form
+        await db.collection('forms').deleteOne({ _id: new ObjectId(formId) });
+
+        res.json({ message: 'Form deleted successfully' });
+
+    } catch (error) {
+        console.error('Error deleting form:', error);
+        if (error.name === 'JsonWebTokenError') {
+            return res.status(401).json({ error: 'Invalid token' });
+        }
+        res.status(500).json({ error: 'Failed to delete form' });
+    }
+});
 
 // SERVER SETUP
-app.listen(3000, () => {
-  console.log('🚀 Server running on http://localhost:3000');
+const PORT = process.env.PORT || 3001;
+app.listen(PORT, () => {
+  console.log(`🚀 Server running on http://localhost:${PORT}`);
   console.log('Available endpoints:');
   console.log('POST /api/auth/signup - User registration');
   console.log('POST /api/auth/signin - User login');
