@@ -18,8 +18,6 @@ console.log('Groq API Key:', process.env.GROQ_API_KEY ? '***' + process.env.GROQ
 console.log('Groq Model:', process.env.GROQ_MODEL || 'llama-3.3-70b-versatile (default)');
 
 const app = express();
-const cors = require('cors');
-
 // CORS configuration for production
 const corsOptions = {
   origin: [
