@@ -23,6 +23,7 @@ const corsOptions = {
   origin: [
     'http://localhost:5173',
     'https://form-craft-dynamic-form-builder.vercel.app',
+    'https://form-craft-dynamic-form-builder-8cbufp6g6.vercel.app',
     'https://formcraft-dynamic-form-builder.onrender.com',
     process.env.FRONTEND_URL
   ].filter(Boolean),
