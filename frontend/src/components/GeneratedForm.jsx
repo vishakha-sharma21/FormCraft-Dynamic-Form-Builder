@@ -1,9 +1,9 @@
 // src/components/GeneratedForm.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { useSelector, useDispatch } from 'react-redux';
 import axios from 'axios';
-import { FiPlus, FiTrash2, FiMove } from 'react-icons/fi';
+import { FiPlus, FiTrash2, FiMove, FiLoader } from 'react-icons/fi';
 import { DndContext, closestCenter } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
 import API_CONFIG from '../config/api'; // Assuming you use Redux for auth state
@@ -361,7 +361,7 @@ const GeneratedForm = ({ schema, formTitle }) => {
     }, [fields, setValue, trigger]);
 
     const watchedValues = watch();
-    React.useEffect(() => {
+    useEffect(() => {
         const pincodeField = fields.find(f =>
             f.name.toLowerCase().includes('pincode') || f.name.toLowerCase().includes('zip')
         );
