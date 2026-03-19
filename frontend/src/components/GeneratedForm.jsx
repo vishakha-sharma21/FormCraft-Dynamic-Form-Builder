@@ -1,4 +1,5 @@
 // src/components/GeneratedForm.jsx
+// Updated: 2025-03-19 - Fixed useNavigate import
 import React, { useState, useEffect, useCallback } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { useSelector, useDispatch } from 'react-redux';
@@ -7,7 +8,7 @@ import { FiPlus, FiTrash2, FiMove, FiLoader } from 'react-icons/fi';
 import { DndContext, closestCenter } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
 import API_CONFIG from '../config/api'; // Assuming you use Redux for auth state
-import { useNavigate } from 'react-router-dom';
+import * as Router from 'react-router-dom';
 import toast from 'react-hot-toast';
 
 const getValidationRules = (field) => {
@@ -293,7 +294,7 @@ const GeneratedForm = ({ schema, formTitle }) => {
     
     // Auth state from Redux
     const { user, token } = useSelector((state) => state.auth);
-    const navigate = useNavigate();
+    const navigate = Router.useNavigate();
 
     const formMethods = useForm({
         mode: 'onChange',
