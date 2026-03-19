@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useRef, useNavigate } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { FiPlus, FiRefreshCw, FiFileText, FiGrid } from 'react-icons/fi';
 import InputQuery from './InputQuery';
