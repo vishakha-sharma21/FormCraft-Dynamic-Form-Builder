@@ -10,7 +10,7 @@ on:
 
 jobs:
   frontend:
-    name: Build Frontend
+    name: Frontend CI
     runs-on: ubuntu-latest
 
     defaults:
@@ -30,6 +30,9 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Run tests
+        run: npm test
 
       - name: Build frontend
         run: npm run build
